@@ -1,0 +1,6 @@
+opencv-python
+ultralytics
+supervision
+numpy
+pandas
+tqdm
