@@ -23,6 +23,9 @@ def get_video_info(video_path):
     )
 
     duration = frame_count / fps
+    hours = int(duration // 3600)
+    minutes = int((duration % 3600) // 60)
+    seconds = int(duration % 60)
 
     cap.release()
 
@@ -32,8 +35,7 @@ def get_video_info(video_path):
     print(f"해상도     : {width} x {height}")
     print(f"FPS        : {fps:.3f}")
     print(f"전체 프레임 : {frame_count}")
-    print(f"재생시간   : {duration:.2f}초")
-    print(f"재생시간   : {duration / 60:.2f}분")
+    print(f"재생시간   : {hours:02d}:{minutes:02d}:{seconds:02d}")
 
 
 def main():
