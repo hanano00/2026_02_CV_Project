@@ -1,8 +1,9 @@
-import cv2
-import os
-import json
-import glob
 import argparse
+import glob
+import json
+import os
+
+import cv2
 
 
 class Annotator:

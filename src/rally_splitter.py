@@ -1,8 +1,9 @@
-import cv2
-import os
-import glob
 import argparse
+import glob
+import os
 import shutil
+
+import cv2
 
 
 class RallySplitter:

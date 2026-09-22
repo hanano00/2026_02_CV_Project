@@ -1,7 +1,8 @@
-import os
-import glob
-import shutil
 import argparse
+import glob
+import os
+import shutil
+
 import cv2
 
 
