@@ -4,15 +4,20 @@ import os
 from yt_dlp import YoutubeDL
 
 
-def download_video(url, output_path):
-
+def download_video(url, output_path, fps):
     output_dir = os.path.dirname(output_path)
 
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
+    format_selector = (
+        f"bestvideo[height<=1080][fps={fps}]"
+        "+bestaudio/"
+        f"best[height<=1080][fps={fps}]"
+    )
+
     ydl_opts = {
-        "format": "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+        "format": format_selector,
         "merge_output_format": "mp4",
         "outtmpl": output_path,
     }
@@ -22,7 +27,6 @@ def download_video(url, output_path):
 
 
 def main():
-
     parser = argparse.ArgumentParser(
         description="YouTube 영상을 다운로드합니다."
     )
@@ -38,14 +42,23 @@ def main():
         help="저장할 파일 경로"
     )
 
+    parser.add_argument(
+        "--fps",
+        type=int,
+        default=25,
+        help="원하는 FPS (기본값: 25)"
+    )
+
     args = parser.parse_args()
 
-    print(f"URL    : {args.url}")
-    print(f"저장 위치: {args.output}")
+    print(f"URL      : {args.url}")
+    print(f"저장 위치 : {args.output}")
+    print(f"요청 FPS  : {args.fps}")
 
     download_video(
         args.url,
-        args.output
+        args.output,
+        args.fps
     )
 
     print("다운로드 완료")
