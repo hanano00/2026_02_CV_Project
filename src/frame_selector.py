@@ -1,8 +1,7 @@
-import argparse
-import glob
 import os
+import glob
 import shutil
-
+import argparse
 import cv2
 
 
@@ -20,6 +19,9 @@ class FrameSelector:
         )
 
         self.current_index = 0
+
+        # 한 번에 이동할 프레임 수
+        self.step = 5
 
         # 선택된 프레임
         self.selected = set()
@@ -40,9 +42,9 @@ class FrameSelector:
 
         for path in selected_paths:
 
-            filename = os.path.basename(path)
-
-            self.selected.add(filename)
+            self.selected.add(
+                os.path.basename(path)
+            )
 
     def get_filename(self):
 
@@ -85,9 +87,7 @@ class FrameSelector:
             exist_ok=True
         )
 
-        for index, frame_path in enumerate(
-            self.frame_paths
-        ):
+        for frame_path in self.frame_paths:
 
             filename = os.path.basename(
                 frame_path
@@ -126,10 +126,12 @@ class FrameSelector:
         if filename in self.selected:
 
             status = "SELECTED"
+            status_color = (0, 255, 0)
 
         else:
 
             status = "NOT SELECTED"
+            status_color = (0, 0, 255)
 
         cv2.putText(
             frame,
@@ -147,15 +149,13 @@ class FrameSelector:
             (20, 70),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
-            (0, 255, 0) if status == "SELECTED"
-            else (0, 0, 255),
+            status_color,
             2
         )
 
         cv2.putText(
             frame,
-            "A: Previous  D: Next  "
-            "S: Select  Q: Quit",
+            f"A/D: Move   Step: {self.step}",
             (20, 105),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.6,
@@ -165,8 +165,28 @@ class FrameSelector:
 
         cv2.putText(
             frame,
-            f"Selected: {len(self.selected)}",
+            "[ / ]: Change Step",
             (20, 140),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            "S: Select   Q: Quit",
+            (20, 175),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"Selected: {len(self.selected)}",
+            (20, 210),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.6,
             (255, 255, 255),
@@ -220,19 +240,39 @@ class FrameSelector:
             # 이전
             if key == ord("a"):
 
-                if self.current_index > 0:
-
-                    self.current_index -= 1
+                self.current_index = max(
+                    0,
+                    self.current_index - self.step
+                )
 
             # 다음
             elif key == ord("d"):
 
-                if (
-                    self.current_index
-                    < len(self.frame_paths) - 1
-                ):
+                self.current_index = min(
+                    len(self.frame_paths) - 1,
+                    self.current_index + self.step
+                )
 
-                    self.current_index += 1
+            # Step 감소
+            elif key == ord("["):
+
+                self.step = max(
+                    1,
+                    self.step - 1
+                )
+
+                print(
+                    f"Step: {self.step}"
+                )
+
+            # Step 증가
+            elif key == ord("]"):
+
+                self.step += 1
+
+                print(
+                    f"Step: {self.step}"
+                )
 
             # 선택 / 선택 해제
             elif key == ord("s"):
