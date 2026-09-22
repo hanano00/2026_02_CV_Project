@@ -3,6 +3,8 @@ import os
 
 from yt_dlp import YoutubeDL
 
+# uv run yt-dlp -F "URL" : 다운로드 가능한 영상정보 확인
+
 
 def download_video(url, output_path, fps):
     output_dir = os.path.dirname(output_path)
