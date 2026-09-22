@@ -4,3 +4,4 @@ supervision
 numpy
 pandas
 tqdm
+yt-dlp
