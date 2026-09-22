@@ -253,14 +253,10 @@ class RallySplitter:
                     self.step - 1
                 )
 
-                print(f"이동 폭: {self.step}")
-
             # 이동 폭 증가
             elif key == ord("]"):
 
                 self.step += 1
-
-                print(f"이동 폭: {self.step}")
 
             # 시작 지정
             elif key == ord("s"):
