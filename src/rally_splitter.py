@@ -74,6 +74,26 @@ class RallySplitter:
             2
         )
 
+        cv2.putText(
+            frame,
+            "[: Increase Step  ]:Decrease Step",
+            (20, 100),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"Step: {self.step}",
+            (20, 100),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2
+        )
+
         if self.start_index is not None:
 
             start_frame = self.get_frame_number(
