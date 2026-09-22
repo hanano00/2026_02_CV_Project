@@ -66,7 +66,7 @@ class RallySplitter:
 
         cv2.putText(
             frame,
-            "S: Start  E: End  [: Increase Step  ]:Decrease Step  N: Save Rally  Q: Quit",
+            "S: Start  E: End  [: Decrease Step  ]:Increase Step  N: Save Rally  Q: Quit",
             (20, 100),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.6,
