@@ -232,19 +232,18 @@ class RallySplitter:
             # 이전 프레임
             if key == ord("a"):
 
-                if self.current_index > 0:
-
-                    self.current_index -= 1
+                self.current_index = max(
+                    0,
+                    self.current_index - self.step
+                )
 
             # 다음 프레임
             elif key == ord("d"):
 
-                if (
-                    self.current_index
-                    < len(self.frame_paths) - 1
-                ):
-
-                    self.current_index += 1
+                self.current_index = min(
+                    len(self.frame_paths) - 1,
+                    self.current_index + self.step
+                )
 
             # 이동 폭 감소
             elif key == ord("["):
