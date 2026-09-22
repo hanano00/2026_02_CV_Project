@@ -25,6 +25,9 @@ class RallySplitter:
         self.start_index = None
         self.end_index = None
 
+        # 기본 프레임 이동 폭
+        self.step = 1
+
     def get_frame_number(self, index):
 
         filename = os.path.basename(
@@ -232,6 +235,23 @@ class RallySplitter:
                 ):
 
                     self.current_index += 1
+
+            # 이동 폭 감소
+            elif key == ord("["):
+
+                self.step = max(
+                    1,
+                    self.step - 1
+                )
+
+                print(f"이동 폭: {self.step}")
+
+            # 이동 폭 증가
+            elif key == ord("]"):
+
+                self.step += 1
+
+                print(f"이동 폭: {self.step}")
 
             # 시작 지정
             elif key == ord("s"):
