@@ -3,3 +3,6 @@ datasets/
 .python-version
 pyproject.toml
 uv.lock
+runs/
+__pycache__/
+*.pyc

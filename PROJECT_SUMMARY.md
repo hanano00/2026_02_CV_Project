@@ -1,4 +1,4 @@
-# AI가 이해한 프로젝트 요약
+# 프로젝트 요약
 
 ## 1. 문서의 목적과 갱신 원칙
 
@@ -9,6 +9,8 @@
 ## 2. 프로젝트 목표와 설계 방향
 
 테니스 영상에서 선수·공을 검출하는 학습 모델을 만들고, 이를 기반으로 선수들의 랠리 패턴을 모델링하고 분석하는 프로젝트다. 객체검출은 이후 분석에 필요한 데이터를 얻는 앞단 단계다.
+
+사용자는 사전학습 모델을 활용하는 방향이 아니라 **PyTorch로 모델 구조를 직접 정의하고 무작위 초기화부터 학습하는 방향**을 명시했다. 첫 구현은 CNN 기반 단일 스케일 격자형 검출기다.
 
 사용자가 구상한 전체 흐름은 다음과 같다.
 
@@ -23,7 +25,7 @@
 
 ## 3. 현재 구현 범위와 실행 순서
 
-현재 구현은 **영상 수집부터 학습용 프레임 준비·수동 bbox 라벨링까지**다. 객체검출 모델 학습·추론, 객체 추적, 코트 구역화, 상태전이 학습, 랠리 패턴 분석은 아직 구현되지 않았다.
+현재 구현은 **영상 수집·프레임 준비·수동 라벨링과 PyTorch 검출 모델의 학습·평가·이미지 추론 코드까지**다. 데이터셋 구성이 끝났다는 전제로 코드를 작성했으며 실제 학습은 아직 실행하지 않았다. 객체 추적, 코트 구역화, 상태전이 학습, 랠리 패턴 분석은 아직 구현되지 않았다.
 
 사용자가 확정한 데이터 준비 순서는 다음과 같다.
 
@@ -37,10 +39,23 @@
 | 04 | [04_rally_splitter.py](src/04_rally_splitter.py) | 수동 지정한 시작·끝을 포함하는 입력 프레임을 랠리별 폴더에 복사하고 `rally_metadata.json`을 저장한다. |
 | 05 | [05_frame_selector.py](src/05_frame_selector.py) | 개별 랠리에서 사용할 프레임을 선택해 별도 폴더에 복사하고 `selection_metadata.json`을 저장한다. |
 | 06 | [06_annotator.py](src/06_annotator.py) | 선수 또는 공의 bbox를 마우스로 지정하고 프레임별 JSON으로 저장한다. |
+| 07 | [07_train_detector.py](src/07_train_detector.py) | 직접 정의한 CNN을 처음부터 학습하고 best/last 가중치와 epoch별 기록을 저장한다. |
+| 08 | [08_evaluate_detector.py](src/08_evaluate_detector.py) | val/test split에서 클래스별 Precision/Recall/AP50을 계산한다. |
+| 09 | [09_predict_detector.py](src/09_predict_detector.py) | 이미지 한 장에서 객체를 검출하고 원본 좌표 bbox JSON과 시각화를 저장한다. |
 
 각 파일은 독립적인 CLI다. 앞 단계의 출력 경로를 다음 단계의 입력으로 전달하며, 번호가 다음 스크립트를 자동 실행하지는 않는다. 05단계에는 랠리들을 담은 상위 폴더가 아니라 개별 랠리 폴더를 전달한다.
 
 실행 명령과 경로 예시는 [src/README.md](src/README.md)에 정리되어 있다.
+
+### 직접 구현한 검출 모델
+
+- `src/detection/model.py`의 `TennisGridDetector`는 Conv·GroupNorm·SiLU 특징 추출부와 클래스별 격자 출력부를 갖는다. stride는 8이며 모든 가중치를 새로 초기화한다.
+- 각 클래스·격자에서 객체 점수, 중심 x/y, log 너비/높이를 출력한다. 같은 클래스의 두 중심이 같은 격자에 들어가면 오류로 알리며 정답을 버리지 않는다.
+- 객체 점수에는 focal loss, 중심·크기에는 Smooth L1을 적용하고 AdamW로 학습한다. 추론에는 클래스별 NMS를 사용한다.
+- `[player, ball]` 클래스별 기존 JSON 또는 통합 JSON을 데이터 설정으로 읽는다. 미검수 프레임을 빈 정답으로 취급하지 않는다.
+- 검증 AP50과 검증 손실로 최적 체크포인트를 고른다. AP50은 IoU 0.5 지표이며 COCO mAP50-95와 구분한다.
+- 세부 구조·입출력 계약·기본값·제약은 [검출 모델 문서](src/detection/README.md), 경로 설정은 [예시 JSON](configs/detector.example.json)에 정리했다.
+- 이 단계의 실제 학습·성능 평가·소프트웨어 테스트는 실행하지 않았다. 성능이 입증된 모델이 아니라 첫 학습 실험을 위한 구현이다.
 
 ## 4. common.py의 역할
 
@@ -109,6 +124,7 @@ bbox JSON은 기존 형식을 유지한다. 프레임 번호를 키로 사용하
 - 누락됐던 `yt-dlp`를 `pyproject.toml` 의존성에 추가하고 `uv.lock`에 반영했다. `requirements.txt`에도 포함되어 있다.
 - 영상·오디오를 합치는 다운로드에는 별도로 설치된 ffmpeg가 필요하다.
 - 코드의 import와 포맷을 정리했다.
+- 모델 구현에서 `ultralytics` 의존성을 제거하고 `torch`를 직접 의존성으로 등록했다. 모델 가중치와 실험 기록을 담는 `runs/`는 Git에서 제외한다.
 - 사용자의 요청으로 `tests/`를 삭제하고 README의 테스트 실행 안내도 제거했다. 이 문서는 현재 코드 상태를 정리하며 실제 GUI 동작 검증 완료를 의미하지 않는다.
 
 ## 9. 사용 모듈과 공식 Documentation
@@ -120,6 +136,8 @@ bbox JSON은 기존 형식을 유지한다. 프레임 번호를 키로 사용하
 | OpenCV / `cv2` | 영상 정보 조회, 프레임 읽기·저장, GUI 창, 키·마우스 입력, bbox 그리기 | [OpenCV 문서](https://docs.opencv.org/5.0/) |
 | yt-dlp / `yt_dlp` | 다운로드 형식 선택, `YoutubeDL` 실행, 다운로드 오류 처리 | [공식 README](https://github.com/yt-dlp/yt-dlp#readme), [Python에서 사용하기](https://github.com/yt-dlp/yt-dlp#embedding-yt-dlp) |
 | tqdm / `tqdm` | 프레임 추출 진행률 표시 | [tqdm 문서](https://tqdm.github.io/) |
+| PyTorch / `torch` | CNN 정의, Dataset/DataLoader, 손실·역전파·최적화, 체크포인트 | [신경망 모듈](https://docs.pytorch.org/docs/stable/nn.html), [데이터 로딩](https://docs.pytorch.org/docs/stable/data.html), [저장·복원](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html) |
+| NumPy / `numpy` | 이미지 전처리와 난수 시드 설정 | [NumPy 문서](https://numpy.org/doc/stable/) |
 
 ### Python 표준 라이브러리
 
@@ -137,6 +155,7 @@ bbox JSON은 기존 형식을 유지한다. 프레임 번호를 키로 사용하
 | `shutil` | 랠리·선택 프레임 복사 | [shutil](https://docs.python.org/3.14/library/shutil.html) |
 | `hashlib` | 기존 선택 이미지와 원본의 SHA-256 해시를 비교해 내용 확인 | [hashlib](https://docs.python.org/3.14/library/hashlib.html) |
 | `typing` | 공통 JSON 저장 함수의 `Any` 타입 힌트 | [typing](https://docs.python.org/3.14/library/typing.html) |
+| `random` | 학습 실행의 Python 난수 시드 설정 | [random](https://docs.python.org/3.14/library/random.html) |
 
 ### 의존성에 등록되어 있지만 현재 src에서 직접 import하지 않는 패키지
 
@@ -144,9 +163,7 @@ bbox JSON은 기존 형식을 유지한다. 프레임 번호를 키로 사용하
 
 | 패키지 | 제공 기능 | 공식 문서 |
 |---|---|---|
-| `ultralytics` | YOLO 등 컴퓨터 비전 모델의 학습·추론 | [Ultralytics 문서](https://docs.ultralytics.com/) |
 | `supervision` | 검출 결과 처리와 시각화 등 컴퓨터 비전 도구 | [Supervision 문서](https://supervision.roboflow.com/latest/) |
-| `numpy` | 다차원 배열과 수치 연산 | [NumPy 문서](https://numpy.org/doc/stable/) |
 | `pandas` | 표 형식 데이터 처리·분석 | [pandas 문서](https://pandas.pydata.org/docs/) |
 
 ### 개발·실행 도구와 프로젝트 내부 모듈
@@ -157,8 +174,3 @@ bbox JSON은 기존 형식을 유지한다. 프레임 번호를 키로 사용하
 | Ruff | Python 코드 스타일 검사와 포맷 정리 | [Ruff 문서](https://docs.astral.sh/ruff/) |
 | FFmpeg | yt-dlp에서 별도 영상·오디오를 병합할 때 사용하는 외부 실행 도구 | [FFmpeg 문서](https://ffmpeg.org/documentation.html) |
 | `common.py` | 이 프로젝트에서 직접 작성한 공통 기능 | [소스와 함수 설명](src/common.py), 이 문서의 4절 |
-
-## 10. 참고 대화
-
-- 사용자가 제공한 이전 프로젝트 채팅: https://chatgpt.com/share/6ab2ae82-94d8-83ee-a2a7-63ffd11e734d
-- 공유 링크의 본문은 접근 실패로 읽지 못했다. 프로젝트 목표와 구상은 현재 대화에서 사용자가 직접 설명한 내용에 근거한다.

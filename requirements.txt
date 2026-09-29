@@ -1,5 +1,5 @@
 opencv-python
-ultralytics
+torch>=2.14.0
 supervision
 numpy
 pandas

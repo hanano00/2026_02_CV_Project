@@ -18,15 +18,15 @@ from common import positive_finite
 def download_video(url, output_path, fps):
     """조건에 맞는 영상과 오디오를 선택해 하나의 영상으로 저장한다."""
     fps = positive_finite(fps)
+    # 중간 폴더가 없거나, 폴더가 이미 있는 경우에 오류를 내지 않기위해 Path 객체로 다룬다.
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # 별도 영상+오디오를 우선 선택하고, 없으면 소리가 포함된 단일 소스를 사용한다.
     # 29.97 같은 FPS도 지정할 수 있다. 조건에 맞는 소스가 없으면 다운로드가 실패한다.
-    requested_fps = f"{fps:g}"
     format_selector = (
-        f"bestvideo[height<=1080][fps={requested_fps}]+bestaudio/"
-        f"best[height<=1080][fps={requested_fps}]"
+        f"bestvideo[height<=1080][fps={fps:g}]+bestaudio/"
+        f"best[height<=1080][fps={fps:g}]"
     )
     ydl_opts = {
         "format": format_selector,
@@ -43,7 +43,8 @@ def main():
     """다운로드 조건과 저장 위치를 CLI에서 받아 실행한다."""
     parser = argparse.ArgumentParser(description="YouTube 영상을 다운로드합니다.")
     parser.add_argument("url", help="YouTube 영상 URL")
-    parser.add_argument("--output", default="videos/video.mp4", help="저장할 파일 경로")
+    parser.add_argument(
+        "--output", default="videos/video.mp4", help="저장할 파일 경로")
     parser.add_argument(
         "--fps",
         type=positive_finite,

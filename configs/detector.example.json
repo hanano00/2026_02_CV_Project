@@ -1,0 +1,30 @@
+{
+    "classes": ["player", "ball"],
+    "train": [
+        {
+            "images": "../datasets/detection/train/images",
+            "annotations": {
+                "player": "../datasets/detection/train/player.json",
+                "ball": "../datasets/detection/train/ball.json"
+            }
+        }
+    ],
+    "val": [
+        {
+            "images": "../datasets/detection/val/images",
+            "annotations": {
+                "player": "../datasets/detection/val/player.json",
+                "ball": "../datasets/detection/val/ball.json"
+            }
+        }
+    ],
+    "test": [
+        {
+            "images": "../datasets/detection/test/images",
+            "annotations": {
+                "player": "../datasets/detection/test/player.json",
+                "ball": "../datasets/detection/test/ball.json"
+            }
+        }
+    ]
+}

@@ -29,8 +29,8 @@ def get_video_info(video_path):
         frame_count = int(count)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        seconds = int(frame_count / fps)
-        hours, remainder = divmod(seconds, 3600)
+        total_seconds = int(frame_count / fps)
+        hours, remainder = divmod(total_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
 
         print("\n===== Video Information =====")
