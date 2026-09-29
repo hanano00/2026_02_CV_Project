@@ -47,6 +47,116 @@
 
 실행 명령과 경로 예시는 [src/README.md](src/README.md)에 정리되어 있다.
 
+### 실행 순서에 따른 데이터셋 구조
+
+아래는 앞으로 구성할 경로 예시이며, 데이터셋이 이미 완성되었다는 의미는 아니다.
+01~06은 `src/README.md`의 실행 예시와 같은 구조다. 경기마다 `match01`,
+`match02`처럼 폴더를 구분하고, 랠리별 프레임과 라벨을 유지한다.
+
+```text
+datasets/
+├── videos/                                # 01 다운로드, 02 정보 확인
+│   ├── match01.mp4
+│   └── match02.mp4
+├── match01/
+│   ├── frames/                            # 03 영상에서 추출한 프레임
+│   │   ├── frame_000000.jpg
+│   │   ├── ...
+│   │   └── frames_metadata.json
+│   ├── rallies/                           # 04 구간별 프레임 복사
+│   │   ├── rally_0001/
+│   │   │   ├── frame_000100.jpg
+│   │   │   ├── ...
+│   │   │   └── rally_metadata.json
+│   │   └── rally_0002/
+│   │       └── ...
+│   ├── selected/                          # 05 검출 학습용 프레임 선택
+│   │   ├── rally_0001/
+│   │   │   ├── frame_000100.jpg
+│   │   │   ├── ...
+│   │   │   └── selection_metadata.json
+│   │   └── rally_0002/
+│   │       └── ...
+│   └── annotations/                       # 06 선수·공을 각각 라벨링
+│       ├── rally_0001_player.json
+│       ├── rally_0001_ball.json
+│       ├── rally_0002_player.json
+│       └── rally_0002_ball.json
+└── match02/                               # 다른 경기도 같은 구조
+    └── ...
+
+configs/
+└── detector.json                          # 06 이후 직접 작성: 분할별 경로 목록
+runs/
+├── detector01/                            # 07 학습 결과
+│   ├── run_config.json
+│   ├── history.json
+│   ├── best.pt
+│   └── last.pt
+├── detector01_val/                        # 08 개선 과정의 검증 결과
+│   └── metrics.json
+├── detector01_test/                       # 08 최종 평가 결과
+│   └── metrics.json
+└── detector01_predict/                    # 09 이미지 한 장의 추론 결과
+    ├── prediction.json
+    └── prediction.jpg
+```
+
+03의 파일명 숫자는 원본 영상의 프레임 번호이며, 04·05에서 복사할 때도 유지한다.
+06의 JSON은 이미지마다 별도 파일을 만드는 대신, 한 랠리의 프레임 번호를 키로
+여러 이미지의 라벨을 저장한다. 선택한 모든 이미지에 선수·공 각각의 검수된 기록이
+필요하며, 객체가 없는 이미지도 확인 후 빈 `objects` 목록을 저장한다.
+
+**06과 07 사이에는 데이터 분할과 설정 파일 작성이 필요하다.** 현재 로더는
+분할마다 여러 이미지 폴더와 라벨 파일을 받을 수 있으므로, 위 폴더를 유지한 채
+`configs/detector.json`에서 경로를 연결할 수 있다. 예를 들면 다음과 같다.
+
+```json
+{
+  "classes": ["player", "ball"],
+  "train": [{
+    "images": "../datasets/match01/selected/rally_0001",
+    "annotations": {
+      "player": "../datasets/match01/annotations/rally_0001_player.json",
+      "ball": "../datasets/match01/annotations/rally_0001_ball.json"
+    }
+  }],
+  "val": [{
+    "images": "../datasets/match02/selected/rally_0001",
+    "annotations": {
+      "player": "../datasets/match02/annotations/rally_0001_player.json",
+      "ball": "../datasets/match02/annotations/rally_0001_ball.json"
+    }
+  }],
+  "test": [{
+    "images": "../datasets/match03/selected/rally_0001",
+    "annotations": {
+      "player": "../datasets/match03/annotations/rally_0001_player.json",
+      "ball": "../datasets/match03/annotations/rally_0001_ball.json"
+    }
+  }]
+}
+```
+
+위 JSON은 경로 연결만 보여주는 최소 예시다. 실제 구성에서는 각 목록에 여러
+랠리를 추가하고, 예시에 쓰인 `match03`도 동일한 준비 과정을 거친다.
+상대 경로는 설정 파일이 있는 `configs/` 기준이다. 07·08 실행 시
+`--config configs/detector.json`으로 지정한다.
+
+- 경기 단위로 train/val/test를 나누고, 같은 경기의 랠리는 같은 분할에 배정한다.
+  랠리 단위로만 나누는 경우에는 같은 경기 환경에서의 평가라는 한계를 기록한다.
+- 여러 경기의 프레임 번호는 겹칠 수 있으므로 이미지를 한 폴더로 무작정 합치거나
+  프레임 번호를 키로 쓰는 라벨 JSON을 단순 병합하지 않는다.
+- 기존 `configs/detector.example.json`의 `datasets/detection/train`, `val`, `test`
+  구조는 별도로 데이터를 모았을 때의 예시다. 위처럼 원래 경로를 참조하는 방식도
+  지원하며, 두 구조를 모두 만들 필요는 없다. 자동 분할·복사 스크립트는 아직 없다.
+- 07은 train으로 학습하고 val로 최적 가중치를 선택한다. 개선 과정의 08은
+  `--split val`, 최종 확인은 `--split test`를 사용한다. 09는 07의 가중치와
+  이미지 한 장을 입력받으며 08의 출력 파일을 필요로 하지 않는다.
+- 원본 영상, 추출·랠리 프레임과 메타데이터는 이후 시간 순서 분석을 위해 보존한다.
+  04는 03에서 추출된 프레임만 복사하므로, 낮은 FPS로 추출한 랠리 폴더에는 원본의
+  모든 프레임이 들어 있지 않다. 후속 분석에 필요한 시간 해상도는 별도로 정한다.
+
 ### 직접 구현한 검출 모델
 
 - `src/detection/model.py`의 `TennisGridDetector`는 Conv·GroupNorm·SiLU 특징 추출부와 클래스별 격자 출력부를 갖는다. stride는 8이며 모든 가중치를 새로 초기화한다.
